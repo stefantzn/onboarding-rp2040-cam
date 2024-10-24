@@ -30,7 +30,7 @@
 #ifndef _IMAGEDATA_H_
 #define _IMAGEDATA_H_
 
-extern const unsigned char gImage_waveshare[];
+extern const unsigned char realityLabsLogo[];
 
 #endif
 /* FILE END */
