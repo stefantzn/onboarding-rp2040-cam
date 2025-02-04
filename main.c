@@ -10,25 +10,27 @@
 #include "GUI_Paint.h"
 #include "hardware/clocks.h"
 
-uint8_t image_buf[324*324]; //camera buffer, 8 bit color
-uint16_t displayBuf[240*135]; //display buffer, in a weird RGB565 format
+uint8_t image_buf[324*324]; // Camera buffer, 8 bit color
+uint16_t displayBuf[240*135]; // Display buffer, in a weird RGB565 format
 
-#define FLAG_VALUE 1234 // this flag value is going to be sent across cores!
-uint8_t imageReady = 0; //only if the camera buffer has a new image, we display it!
+#define FLAG_VALUE 1234 // This flag value is going to be sent across cores!
+uint8_t imageReady = 0; // Only if the camera buffer has a new image, we display it!
 
 int main() {
 
-    stdio_init_all(); // initialzie stdio
-    vreg_set_voltage(VREG_VOLTAGE_1_10); // set voltage to 1.1V
-    set_sys_clock_khz(250000, true);  // set system clock to 250MHz
+    stdio_init_all(); // Initialzie stdio
+    vreg_set_voltage(VREG_VOLTAGE_1_10); // Set voltage to 1.1V
+    set_sys_clock_khz(250000, true);  // Set system clock to 250MHz
 
+    // 20 loops x 100 ms = 20s
     int loops = 20;
 
-    while (!tud_cdc_connected()) { // wait for USB to connect
+    // Wait for USB to connect
+    while (!tud_cdc_connected()) { 
 
         sleep_ms(100);
 
-        if (--loops == 0) { // if USB doesn't connect in 2 seconds, break
+        if (--loops == 0) { // If USB doesn't connect in 2 seconds, break
 
             break;
         }
@@ -38,20 +40,23 @@ int main() {
     multicore_launch_core1(core1_entry);
     uint32_t ack = multicore_fifo_pop_blocking();
 
+    // Wait for acknowledgment from core 1
     if (ack != FLAG_VALUE) {
 
         printf("Error: core1_entry() returned %d\n", ack); // Core 0 failed to acknowledge core 1
     }
     else {
-
+        
+        // Notify core 1 that core 0 is ready
         multicore_fifo_push_blocking(FLAG_VALUE);
         printf("core1_entry() returned %d\n", ack); // Success
     }
 
     while (true) {
 
-        if (imageReady == 1) { // image is ready to be displayed
+        if (imageReady == 1) { // Image is ready to be displayed
 
+            // Display the image
             LCD_1IN14_V2_Display(displayBuf);
             imageReady = 0;
         }
@@ -59,21 +64,21 @@ int main() {
         sleep_ms(1);
     }
     
-    tight_loop_contents(); // placeholder to find tight loops more easily
+    tight_loop_contents(); // Placeholder to find tight loops more easily
 }
 
 void core1_entry() {
 
-    DEV_Module_Init(); // initialize all the screens and peripherals
-    LCD_1IN14_V2_Init(HORIZONTAL); // initialize the LCD screen in the horizontal direction
-    LCD_1IN14_V2_Clear(BLACK);  // clear the screen to black
+    DEV_Module_Init(); // Initialize all the screens and peripherals
+    LCD_1IN14_V2_Init(HORIZONTAL); // Initialize the LCD screen in the horizontal direction
+    LCD_1IN14_V2_Clear(BLACK);  // Clear the screen to black
 
-    UDOUBLE Imagesize = LCD_1IN14_V2_HEIGHT * LCD_1IN14_V2_WIDTH; // image size
-    UWORD *BlackImage; // black image
+    UDOUBLE Imagesize = LCD_1IN14_V2_HEIGHT * LCD_1IN14_V2_WIDTH; // Image size
+    UWORD *BlackImage; // Black image
 
-    if ((BlackImage = (UWORD *)malloc(Imagesize)) == NULL) { // allocate memory for the black image
+    if ((BlackImage = (UWORD *)malloc(Imagesize)) == NULL) { // Allocate memory for the black image
 
-        printf("Failed to apply for black memory...\r\n"); // error
+        printf("Failed to apply for black memory...\r\n"); // Error
         exit(0);
     }
 
@@ -83,13 +88,13 @@ void core1_entry() {
     // Wait for acknowledgment from core 0
     uint32_t ack = multicore_fifo_pop_blocking();
 
-    if (ack != FLAG_VALUE) { // if core 0 fails to acknowledge core 1
+    if (ack != FLAG_VALUE) { // If core 0 fails to acknowledge core 1
 
-        printf("Error: core 0 failed to acknowledge core 1!\n");
+        printf("Error: core 0 failed to acknowledge core 1!\n"); // Error
     }
     else {
 
-        printf("Successfully received acknowledgment from core 0!\n");
+        printf("Successfully received acknowledgment from core 0!\n"); // Success
     }
 
     // Logo drawing portion
@@ -104,7 +109,7 @@ void core1_entry() {
     cam_config_struct(&config);
     cam_init(&config);
 
-    while (true) {  // infinite loop to capture images
+    while (true) {  // Infinite loop to capture images
 
         // Capture an image
         cam_capture_frame(&config);
@@ -115,7 +120,7 @@ void core1_entry() {
             for (int x = 0; x < 240; x++) {
                 
 
-                uint16_t c = image_buf[(y)*324+(x)]; //index to the current pixel
+                uint16_t c = image_buf[(y)*324+(x)]; // Index to the current pixel
 
                 /*
                 * Red: Mask with 0xF8 then shift left 8 bits   (5 bits)
